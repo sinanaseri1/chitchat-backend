@@ -1,10 +1,11 @@
+
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("./schemas/User");
-const { Validate} = require("./controller")
-const authenticateUser = require("./middleware")
+const { Validate } = require("./controller");
+const authenticateUser = require("./middleware");
 
 // Function to create JWT token
 const createToken = (userId) => {
@@ -14,13 +15,15 @@ const createToken = (userId) => {
   return jwt.sign(payload, secretKey, options);
 };
 
-// Login route
+// Login route (can use either username or email)
 router.post("/login", async (req, res) => {
-  console.log("the right function")
-  const { username, password } = req.body;
+  console.log("the right function");
+  const { usernameOrEmail, password } = req.body; // Accept either username or email
 
-  // Step 1: Find user by username
-  const user = await User.findOne({ username });
+  // Step 1: Find user by username or email
+  const user = await User.findOne({
+    $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
+  });
 
   if (!user) {
     return res.status(404).send({ message: "User not found" });
@@ -36,30 +39,25 @@ router.post("/login", async (req, res) => {
   const token = createToken(user._id);
 
   // Step 4: Set the token in cookies (secure and httpOnly flags)
-  // res.cookie("token", token, {
-  //   secure: process.env.NODE_ENV === "production", // Only true in production (use HTTPS in prod)
-  //   httpOnly: true, // Prevent client-side access to the cookie
-  //   maxAge: 3600000, // 1 hour
-  //   sameSite: "strict", // Strict mode for cookies (enhances security)
-  // });
-
   res.cookie("token", token, {
     secure: false, // Use `true` only in production with HTTPS
     httpOnly: true, // Prevent client-side access
     maxAge: 3600000, // 1 hour
     sameSite: "lax", // Prevent CSRF
-});
-
+  });
 
   // Step 5: Send the response with a message
   res.status(200).send({ message: "Login successful", token });
 });
 
+// Signup route
 router.post("/signup", async (req, res) => {
-  const { username, password } = req.body;
+  const { username, email, password } = req.body;
 
-  // Check if user already exists
-  const existingUser = await User.findOne({ username });
+  // Check if user already exists by username or email
+  const existingUser = await User.findOne({
+    $or: [{ username }, { email }],
+  });
   if (existingUser) {
     return res.status(400).json({ message: "User already exists" });
   }
@@ -68,7 +66,7 @@ router.post("/signup", async (req, res) => {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   // Create new user
-  const newUser = new User({ username, password: hashedPassword });
+  const newUser = new User({ username, email, password: hashedPassword });
 
   try {
     await newUser.save();
@@ -79,6 +77,7 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-router.get("/validate", authenticateUser, Validate)
+// Validate route (protected)
+router.get("/validate", authenticateUser, Validate);
 
 module.exports = router;
