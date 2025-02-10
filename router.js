@@ -80,4 +80,34 @@ router.post("/signup", async (req, res) => {
 // Validate route (protected)
 router.get("/validate", authenticateUser, Validate);
 
+
+
+router.get("/users/search", authenticateUser, async (req, res) => {
+  try {
+    // The frontend will hit /users/search?email=someValue
+    const { email } = req.query;
+
+    // If no email query given, we can either return an empty list or all users.
+    // For now, let's return all users if no 'email' query is present:
+    if (!email) {
+      // Option A: return all users
+      const allUsers = await User.find({});
+      return res.status(200).json({ users: allUsers });
+      
+      // Option B: or just return an empty list
+      // return res.status(200).json({ users: [] });
+    }
+
+    // Case-insensitive 'contains' search using a RegExp
+    const regex = new RegExp(email, "i"); 
+    const matchingUsers = await User.find({ email: regex });
+
+    return res.status(200).json({ users: matchingUsers });
+  } catch (error) {
+    console.error("Error searching users:", error);
+    return res.status(500).json({ message: "Error searching users" });
+  }
+});
+
+
 module.exports = router;
