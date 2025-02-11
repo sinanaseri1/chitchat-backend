@@ -1,4 +1,3 @@
-
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcryptjs");
@@ -11,7 +10,7 @@ const authenticateUser = require("./middleware");
 const createToken = (userId) => {
   const payload = { userId };
   const secretKey = process.env.KEY;
-  const options = { expiresIn: "1h" };
+  const options = { expiresIn: "1h" }; // The token expires in 1 hour (you can adjust this if needed)
   return jwt.sign(payload, secretKey, options);
 };
 
@@ -42,7 +41,7 @@ router.post("/login", async (req, res) => {
   res.cookie("token", token, {
     secure: false, // Use `true` only in production with HTTPS
     httpOnly: true, // Prevent client-side access
-    maxAge: 3600000, // 1 hour
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (in milliseconds)
     sameSite: "lax", // Prevent CSRF
   });
 
@@ -78,10 +77,26 @@ router.post("/signup", async (req, res) => {
 });
 
 // Validate route (protected)
-router.get("/validate", authenticateUser, Validate);
+
+router.get("/validate", authenticateUser, async (req, res) => {
+  try {
+    // The `authenticateUser` middleware has added `req.user` with user info
+    const user = await User.findById(req.user.userId); // Access the userId from the decoded token
+
+    if (!user) {
+      return res.status(404).send({ message: "User not found" });
+    }
+
+    // Send back the username
+    res.status(200).send({ username: user.username });
+  } catch (error) {
+    console.error("Error validating user:", error);
+    res.status(500).send({ message: "Server error" });
+  }
+});
 
 
-
+// Search users route (protected)
 router.get("/users/search", authenticateUser, async (req, res) => {
   try {
     // The frontend will hit /users/search?email=someValue
@@ -108,6 +123,5 @@ router.get("/users/search", authenticateUser, async (req, res) => {
     return res.status(500).json({ message: "Error searching users" });
   }
 });
-
 
 module.exports = router;

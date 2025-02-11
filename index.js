@@ -7,8 +7,8 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const User = require("./schemas/User"); // User schema
-const router = express.Router(); // Define your router here
+const User = require("./schemas/User");
+const router = express.Router(); 
 const routes = require("./router")
 dotenv.config();
 
