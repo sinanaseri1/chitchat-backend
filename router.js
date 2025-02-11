@@ -77,7 +77,6 @@ router.post("/signup", async (req, res) => {
 });
 
 // Validate route (protected)
-
 router.get("/validate", authenticateUser, async (req, res) => {
   try {
     // The `authenticateUser` middleware has added `req.user` with user info
@@ -94,7 +93,6 @@ router.get("/validate", authenticateUser, async (req, res) => {
     res.status(500).send({ message: "Server error" });
   }
 });
-
 
 // Search users route (protected)
 router.get("/users/search", authenticateUser, async (req, res) => {
@@ -121,6 +119,29 @@ router.get("/users/search", authenticateUser, async (req, res) => {
   } catch (error) {
     console.error("Error searching users:", error);
     return res.status(500).json({ message: "Error searching users" });
+  }
+});
+
+// Delete account route (protected)
+router.delete("/delete-account", authenticateUser, async (req, res) => {
+  try {
+    // The authenticateUser middleware has added req.user with the userId
+    const userId = req.user.userId;
+    
+    // Find and delete the user
+    const deletedUser = await User.findByIdAndDelete(userId);
+    
+    if (!deletedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Clear the authentication cookie
+    res.clearCookie("token");
+    
+    res.status(200).json({ message: "Sorry to see you go" });
+  } catch (error) {
+    console.error("Error deleting account:", error);
+    res.status(500).json({ message: "Error deleting account" });
   }
 });
 
