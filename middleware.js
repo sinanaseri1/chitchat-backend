@@ -1,8 +1,9 @@
 const jwt = require("jsonwebtoken");
 
 const authenticateUser = (req, res, next) => {
-  console.log("authenticating user...")
-  console.log("Cookies: ", JSON.stringify(req.cookies)); // Debugging: Check if cookies are set
+  console.log("Authenticating user...");
+  console.log("Cookies: ", JSON.stringify(req.cookies)); // Check cookies
+
   const token = req.cookies?.token; // Read token from cookies
 
   if (!token) {
@@ -13,7 +14,11 @@ const authenticateUser = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.KEY); // Verify token
+    console.log("Decoded JWT:", decoded); // Log decoded JWT
+
     req.user = decoded; // Attach user info to request
+    console.log("Authenticated user info:", req.user); // Verify user info attached to request
+
     next(); // Proceed to next middleware/route
   } catch (error) {
     if (error.name === "TokenExpiredError") {
