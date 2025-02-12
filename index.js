@@ -39,7 +39,7 @@ async function run() {
     );
   } catch (error) {
     await mongoose.disconnect();
-    console.log("Error:", error);
+    console.log("Error connecting to MongoDB:", error);
   }
 }
 
@@ -102,22 +102,36 @@ io.on("connection", (socket) => {
 
   // Listen for incoming private messages from clients
   socket.on("privateMessage", async ({ senderId, receiverId, text }) => {
+    console.log("Received privateMessage event:", {
+      senderId,
+      receiverId,
+      text,
+    });
+
     try {
-      // Save the message in MongoDB
+      if (!text || !text.trim()) {
+        console.log("Message text is empty, aborting save.");
+        return;
+      }
+
+      // Create and save the message in MongoDB
       const message = new Message({
         sender: senderId,
         receiver: receiverId,
         text: text,
       });
+      console.log("Saving message to MongoDB:", message);
       await message.save();
+      console.log("Message saved successfully:", message);
 
-      // Emit the message back to the sender (so they see it immediately)
+      // Emit the message back to the sender (for immediate display)
       socket.emit("privateMessage", {
         senderId,
         receiverId,
         text,
         createdAt: message.createdAt,
       });
+      console.log(`Emitted message back to sender ${senderId}`);
 
       // If the receiver is online, emit the message to them
       const receiverSocketId = onlineUsers.get(receiverId);
@@ -128,22 +142,28 @@ io.on("connection", (socket) => {
           text,
           createdAt: message.createdAt,
         });
+        console.log(
+          `Emitted message to receiver ${receiverId} at socket ${receiverSocketId}`
+        );
+      } else {
+        console.log(
+          `Receiver ${receiverId} is offline, message not emitted to receiver.`
+        );
       }
     } catch (error) {
       console.error("Error sending private message:", error);
     }
   });
 
-  // (Optional) Listen for a generic "chat message" event for broadcast messages
+  // Optional: Listen for a generic "chat message" event for broadcast messages
   socket.on("chat message", (msg) => {
-    console.log("Message received: " + msg);
+    console.log("Message received (chat message): " + msg);
     socket.broadcast.emit("chat message", msg);
   });
 
   // Handle disconnection
   socket.on("disconnect", () => {
     console.log("User disconnected: " + socket.id);
-    // Remove the disconnected user from the onlineUsers map
     for (const [userId, sId] of onlineUsers.entries()) {
       if (sId === socket.id) {
         onlineUsers.delete(userId);
