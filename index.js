@@ -12,6 +12,9 @@ const router = express.Router();
 const routes = require("./router");
 dotenv.config();
 
+// Import the Message model (for storing chat messages)
+const Message = require("./schemas/Message");
+
 // Middleware
 app.use(express.json());
 app.use(
@@ -84,20 +87,70 @@ const io = new Server(server, {
   },
 });
 
+// Map to keep track of online users (userId -> socket.id)
+const onlineUsers = new Map();
+
 // Setup Socket.IO event listeners
 io.on("connection", (socket) => {
   console.log("A user connected: " + socket.id);
 
-  // Listen for incoming chat messages from clients
+  // Listen for registration to map userId to socket.id
+  socket.on("register", (userId) => {
+    onlineUsers.set(userId, socket.id);
+    console.log(`User ${userId} registered with socket ${socket.id}`);
+  });
+
+  // Listen for incoming private messages from clients
+  socket.on("privateMessage", async ({ senderId, receiverId, text }) => {
+    try {
+      // Save the message in MongoDB
+      const message = new Message({
+        sender: senderId,
+        receiver: receiverId,
+        text: text,
+      });
+      await message.save();
+
+      // Emit the message back to the sender (so they see it immediately)
+      socket.emit("privateMessage", {
+        senderId,
+        receiverId,
+        text,
+        createdAt: message.createdAt,
+      });
+
+      // If the receiver is online, emit the message to them
+      const receiverSocketId = onlineUsers.get(receiverId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("privateMessage", {
+          senderId,
+          receiverId,
+          text,
+          createdAt: message.createdAt,
+        });
+      }
+    } catch (error) {
+      console.error("Error sending private message:", error);
+    }
+  });
+
+  // (Optional) Listen for a generic "chat message" event for broadcast messages
   socket.on("chat message", (msg) => {
     console.log("Message received: " + msg);
-    // Broadcast the message to all other connected clients
     socket.broadcast.emit("chat message", msg);
   });
 
   // Handle disconnection
   socket.on("disconnect", () => {
     console.log("User disconnected: " + socket.id);
+    // Remove the disconnected user from the onlineUsers map
+    for (const [userId, sId] of onlineUsers.entries()) {
+      if (sId === socket.id) {
+        onlineUsers.delete(userId);
+        console.log(`User ${userId} removed from online users`);
+        break;
+      }
+    }
   });
 });
 
