@@ -79,20 +79,20 @@ router.post("/signup", async (req, res) => {
 // Validate route (protected)
 router.get("/validate", authenticateUser, async (req, res) => {
   try {
-    // The `authenticateUser` middleware has added `req.user` with user info
-    const user = await User.findById(req.user.userId); // Access the userId from the decoded token
+    const user = await User.findById(req.user.userId);
 
     if (!user) {
       return res.status(404).send({ message: "User not found" });
     }
 
-    // Send back the username
-    res.status(200).send({ username: user.username });
+    // Return username AND _id
+    res.status(200).send({ username: user.username, _id: user._id });
   } catch (error) {
     console.error("Error validating user:", error);
     res.status(500).send({ message: "Server error" });
   }
 });
+
 
 // Search users route (protected) - now searching by username
 router.get("/users/search", authenticateUser, async (req, res) => {
