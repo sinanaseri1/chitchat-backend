@@ -79,41 +79,37 @@ router.post("/signup", async (req, res) => {
 // Validate route (protected)
 router.get("/validate", authenticateUser, async (req, res) => {
   try {
-    // The `authenticateUser` middleware has added `req.user` with user info
-    const user = await User.findById(req.user.userId); // Access the userId from the decoded token
+    const user = await User.findById(req.user.userId);
 
     if (!user) {
       return res.status(404).send({ message: "User not found" });
     }
 
-    // Send back the username
-    res.status(200).send({ username: user.username });
+    // Return username AND _id
+    res.status(200).send({ username: user.username, _id: user._id });
   } catch (error) {
     console.error("Error validating user:", error);
     res.status(500).send({ message: "Server error" });
   }
 });
 
-// Search users route (protected)
+
+// Search users route (protected) - now searching by username
 router.get("/users/search", authenticateUser, async (req, res) => {
   try {
-    // The frontend will hit /users/search?email=someValue
-    const { email } = req.query;
+    // The frontend will hit /users/search?username=someValue
+    const { username } = req.query;
 
-    // If no email query given, we can either return an empty list or all users.
-    // For now, let's return all users if no 'email' query is present:
-    if (!email) {
-      // Option A: return all users
+    // If no username query is given, we can either return an empty list or all users.
+    // For now, let's return all users if no 'username' query is present:
+    if (!username) {
       const allUsers = await User.find({});
       return res.status(200).json({ users: allUsers });
-      
-      // Option B: or just return an empty list
-      // return res.status(200).json({ users: [] });
     }
 
-    // Case-insensitive 'contains' search using a RegExp
-    const regex = new RegExp(email, "i"); 
-    const matchingUsers = await User.find({ email: regex });
+    // Case-insensitive 'contains' search using a RegExp on the username field
+    const regex = new RegExp(username, "i");
+    const matchingUsers = await User.find({ username: regex });
 
     return res.status(200).json({ users: matchingUsers });
   } catch (error) {
@@ -127,21 +123,33 @@ router.delete("/delete-account", authenticateUser, async (req, res) => {
   try {
     // The authenticateUser middleware has added req.user with the userId
     const userId = req.user.userId;
-    
+
     // Find and delete the user
     const deletedUser = await User.findByIdAndDelete(userId);
-    
+
     if (!deletedUser) {
       return res.status(404).json({ message: "User not found" });
     }
 
     // Clear the authentication cookie
     res.clearCookie("token");
-    
+
     res.status(200).json({ message: "Sorry to see you go" });
   } catch (error) {
     console.error("Error deleting account:", error);
     res.status(500).json({ message: "Error deleting account" });
+  }
+});
+
+// router.js
+router.get("/users", authenticateUser, async (req, res) => {
+  try {
+    // Return usernames/emails, etc. Adjust as you like.
+    const allUsers = await User.find({}, "username email _id");
+    res.status(200).json({ users: allUsers });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Error fetching users" });
   }
 });
 
