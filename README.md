@@ -5,7 +5,6 @@ This is the backend code for a simple messaging app using Node.js, Express, Mong
 ## Project Structure
 
 ```
-.
 ├── controllers/
 ├── schemas/
 │   ├── Message.js
