@@ -99,15 +99,19 @@ io.on("connection", (socket) => {
     onlineUsers.set(userId, socket.id);
     console.log(`User ${userId} registered with socket ${socket.id}`);
 
-    // Fetch any unread messages from the database for this user
-    const unreadMessages = await Message.find({ receiver: userId, read: false });
-    if (unreadMessages.length > 0) {
-      // Emit the unread messages to the user
-      socket.emit("unreadMessages", unreadMessages);
-      console.log(`Emitted ${unreadMessages.length} unread messages to user ${userId}`);
+    try {
+      // Fetch any unread messages from the database for this user
+      const unreadMessages = await Message.find({ receiver: userId, read: false });
+      if (unreadMessages.length > 0) {
+        // Emit the unread messages to the user
+        socket.emit("unreadMessages", unreadMessages);
+        console.log(`Emitted ${unreadMessages.length} unread messages to user ${userId}`);
+      }
 
-      // Optionally, mark those messages as read
+      // Optionally, mark those messages as read after emitting
       await Message.updateMany({ receiver: userId, read: false }, { $set: { read: true } });
+    } catch (error) {
+      console.error("Error fetching unread messages:", error);
     }
   });
 
@@ -126,14 +130,22 @@ io.on("connection", (socket) => {
       }
 
       // Create and save the message in MongoDB
-      const message = new Message({
+      const message = await new Message({
         sender: senderId,
         receiver: receiverId,
-        text: text,
-      });
-      console.log("Saving message to MongoDB:", message);
-      await message.save();
+        text,
+      }).save();
+      
       console.log("Message saved successfully:", message);
+      
+      const activeUser = await User.findById(senderId);
+      if (activeUser) {
+        activeUser.messages.push(message._id);
+        await activeUser.save();
+        console.log("Message ID added to active user:", activeUser._id);
+      } else {
+        console.error("User not found:", senderId);
+      }
 
       // If the receiver is online, emit the message to them
       const receiverSocketId = onlineUsers.get(receiverId);

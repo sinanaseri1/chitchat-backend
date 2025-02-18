@@ -17,6 +17,10 @@ const messageSchema = new Schema(
       type: String,
       required: true,
     },
+    read: {
+      type: Boolean,
+      default: false, // Default to false, as messages will be unread when first saved
+    },
   },
   { timestamps: true }
 );

@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const User = require("./schemas/User");
 const { Validate } = require("./controller");
 const authenticateUser = require("./middleware");
+const Message = require("./schemas/Message")
 
 // Function to create JWT token
 const createToken = (userId) => {
@@ -95,62 +96,56 @@ router.get("/validate", authenticateUser, async (req, res) => {
 
 
 // Search users route (protected) - now searching by username
-router.get("/users/search", authenticateUser, async (req, res) => {
-  try {
-    // The frontend will hit /users/search?username=someValue
-    const { username } = req.query;
-
-    // If no username query is given, we can either return an empty list or all users.
-    // For now, let's return all users if no 'username' query is present:
-    if (!username) {
-      const allUsers = await User.find({});
-      return res.status(200).json({ users: allUsers });
-    }
-
-    // Case-insensitive 'contains' search using a RegExp on the username field
-    const regex = new RegExp(username, "i");
-    const matchingUsers = await User.find({ username: regex });
-
-    return res.status(200).json({ users: matchingUsers });
-  } catch (error) {
-    console.error("Error searching users:", error);
-    return res.status(500).json({ message: "Error searching users" });
-  }
-});
-
-// Delete account route (protected)
-router.delete("/delete-account", authenticateUser, async (req, res) => {
-  try {
-    // The authenticateUser middleware has added req.user with the userId
-    const userId = req.user.userId;
-
-    // Find and delete the user
-    const deletedUser = await User.findByIdAndDelete(userId);
-
-    if (!deletedUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Clear the authentication cookie
-    res.clearCookie("token");
-
-    res.status(200).json({ message: "Sorry to see you go" });
-  } catch (error) {
-    console.error("Error deleting account:", error);
-    res.status(500).json({ message: "Error deleting account" });
-  }
-});
-
+// router.js
+// router.js
 // router.js
 router.get("/users", authenticateUser, async (req, res) => {
+  console.log("Fetching users with messages for:", req.user.userId);
+
   try {
-    // Return usernames/emails, etc. Adjust as you like.
-    const allUsers = await User.find({}, "username email _id");
-    res.status(200).json({ users: allUsers });
+    const userId = req.user.userId;
+
+    // Fetch messages where the user is either the sender or receiver
+    const messages = await Message.find({
+      $or: [{ sender: userId }, { receiver: userId }]
+    })
+      .populate("sender", "username email _id") // Populate sender details
+      .populate("receiver", "username email _id") // Populate receiver details
+      .lean(); // Convert to plain objects for merging
+
+    // Sort messages by createdAt
+    messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    // Collect unique user IDs from messages (excluding the authenticated user)
+    const userIds = new Set();
+    messages.forEach(msg => {
+      if (msg.sender && msg.sender._id.toString() !== userId) {
+        userIds.add(msg.sender._id.toString());
+      }
+      if (msg.receiver && msg.receiver._id.toString() !== userId) {
+        userIds.add(msg.receiver._id.toString());
+      }
+    });
+
+    // Fetch user details of people the authenticated user has exchanged messages with
+    const users = await User.find({ _id: { $in: Array.from(userIds) } }, "username email _id");
+
+    res.status(200).json({ users, messages });
+
+  } catch (error) {
+    console.error("Error fetching users and conversation history:", error);
+    res.status(500).json({ message: "Error fetching users and conversation history" });
+  }
+});
+
+
+
+router.get("/messages/unread/:userId", authenticateUser, async (req, res, next) => {
+  try {
+    console.log("hello world")
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ message: "Error fetching users" });
   }
-});
-
+})
 module.exports = router;
