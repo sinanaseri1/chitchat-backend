@@ -95,9 +95,24 @@ io.on("connection", (socket) => {
   console.log("A user connected: " + socket.id);
 
   // Listen for registration to map userId to socket.id
-  socket.on("register", (userId) => {
+  socket.on("register", async (userId) => {
     onlineUsers.set(userId, socket.id);
     console.log(`User ${userId} registered with socket ${socket.id}`);
+
+    try {
+      // Fetch any unread messages from the database for this user
+      const unreadMessages = await Message.find({ receiver: userId, read: false });
+      if (unreadMessages.length > 0) {
+        // Emit the unread messages to the user
+        socket.emit("unreadMessages", unreadMessages);
+        console.log(`Emitted ${unreadMessages.length} unread messages to user ${userId}`);
+      }
+
+      // Optionally, mark those messages as read after emitting
+      await Message.updateMany({ receiver: userId, read: false }, { $set: { read: true } });
+    } catch (error) {
+      console.error("Error fetching unread messages:", error);
+    }
   });
 
   // Listen for incoming private messages from clients
@@ -115,23 +130,22 @@ io.on("connection", (socket) => {
       }
 
       // Create and save the message in MongoDB
-      const message = new Message({
+      const message = await new Message({
         sender: senderId,
         receiver: receiverId,
-        text: text,
-      });
-      console.log("Saving message to MongoDB:", message);
-      await message.save();
-      console.log("Message saved successfully:", message);
-
-      // Emit the message back to the sender (for immediate display)
-      socket.emit("privateMessage", {
-        senderId,
-        receiverId,
         text,
-        createdAt: message.createdAt,
-      });
-      console.log(`Emitted message back to sender ${senderId}`);
+      }).save();
+      
+      console.log("Message saved successfully:", message);
+      
+      const activeUser = await User.findById(senderId);
+      if (activeUser) {
+        activeUser.messages.push(message._id);
+        await activeUser.save();
+        console.log("Message ID added to active user:", activeUser._id);
+      } else {
+        console.error("User not found:", senderId);
+      }
 
       // If the receiver is online, emit the message to them
       const receiverSocketId = onlineUsers.get(receiverId);
@@ -147,8 +161,11 @@ io.on("connection", (socket) => {
         );
       } else {
         console.log(
-          `Receiver ${receiverId} is offline, message not emitted to receiver.`
+          `Receiver ${receiverId} is offline, message saved to database.`
         );
+        // Optionally, you could store this message in an "offline message queue" 
+        // for later delivery if needed. This part is not necessary if you already 
+        // save to the database.
       }
     } catch (error) {
       console.error("Error sending private message:", error);
