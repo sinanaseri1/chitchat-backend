@@ -39,12 +39,22 @@ router.post("/login", async (req, res) => {
   const token = createToken(user._id);
 
   // Step 4: Set the token in cookies (secure and httpOnly flags)
-  res.cookie("token", token, {
-    secure: false, // Use `true` only in production with HTTPS
-    httpOnly: true, // Prevent client-side access
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (in milliseconds)
+
+  res.cookie("token", token, { 
+    httpOnly: true, 
+    secure: process.env.NODE_ENV === "production", // Secure in production
+    sameSite: 'none', // Required for cross-origin cookies
+    maxAge: 24 * 60 * 60 * 1000 * 7, // 7 
+    dayspath: '/', 
     sameSite: "lax", // Prevent CSRF
-  });
+    });
+
+  // res.cookie("token", token, {
+  //   secure: false, // Use `true` only in production with HTTPS
+  //   httpOnly: true, // Prevent client-side access
+  //   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (in milliseconds)
+  //   sameSite: "lax", // Prevent CSRF
+  // });
 
   // Step 5: Send the response with a message
   res.status(200).send({ message: "Login successful", token });
@@ -96,9 +106,7 @@ router.get("/validate", authenticateUser, async (req, res) => {
 
 
 // Search users route (protected) - now searching by username
-// router.js
-// router.js
-// router.js
+
 router.get("/users", authenticateUser, async (req, res) => {
   console.log("Fetching users with messages for:", req.user.userId);
 
