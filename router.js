@@ -48,6 +48,7 @@ router.post("/login", async (req, res) => {
     path: "/",
   });
 
+
   // Step 5: Send the response with a message
   res.status(200).send({ message: "Login successful", token });
 });
@@ -97,9 +98,7 @@ router.get("/validate", authenticateUser, async (req, res) => {
 });
 
 // Search users route (protected) - now searching by username
-// router.js
-// router.js
-// router.js
+
 router.get("/users", authenticateUser, async (req, res) => {
   console.log("Fetching users with messages for:", req.user.userId);
 
@@ -143,6 +142,7 @@ router.get("/users", authenticateUser, async (req, res) => {
   }
 });
 
+<<<<<<< HEAD
 router.get(
   "/messages/unread/:userId",
   authenticateUser,
@@ -155,4 +155,40 @@ router.get(
     }
   }
 );
+=======
+router.get("/messages/unread/:userId", authenticateUser, async (req, res, next) => {
+  try {
+    console.log("hello world")
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Error fetching users" });
+  }
+})
+
+router.delete("/messages/delete/:otherUserId", authenticateUser, async (req, res, next) => {
+  try {
+
+    const sentMessages = await Message.find({ sender: req.user.userId, receiver: req.params.otherUserId })
+    const receivedMessages = await Message.find({ sender: req.params.otherUserId, receiver: req.user.userId})
+
+    sentMessages.forEach(async message => {
+      await Message.findByIdAndDelete(message.id);
+    })
+
+    
+    receivedMessages.forEach(async message => {
+      await Message.findByIdAndDelete(message.id);
+    })
+    
+
+    res.status(200).json({ message: "Deleted", sent: sentMessages, received: receivedMessages, me: {id: req.user.userId} , otherUser: req.params.otherUserId })
+
+  } catch (error) {
+    console.error("500 Error! Failed to complete request", error)
+    res.status(500).json({ message: `Error! Failed to complete request\n${error}` })
+  }
+})
+
+
+>>>>>>> a8a23d274b6d13fe062fcc77d8e09621a3de5feb
 module.exports = router;
