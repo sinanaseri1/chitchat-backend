@@ -138,8 +138,6 @@ router.get("/users", authenticateUser, async (req, res) => {
   }
 });
 
-
-
 router.get("/messages/unread/:userId", authenticateUser, async (req, res, next) => {
   try {
     console.log("hello world")
@@ -148,4 +146,30 @@ router.get("/messages/unread/:userId", authenticateUser, async (req, res, next) 
     res.status(500).json({ message: "Error fetching users" });
   }
 })
+
+router.delete("/messages/delete/:otherUserId", authenticateUser, async (req, res, next) => {
+  try {
+
+    const sentMessages = await Message.find({ sender: req.user.userId, receiver: req.params.otherUserId })
+    const receivedMessages = await Message.find({ sender: req.params.otherUserId, receiver: req.user.userId})
+
+    sentMessages.forEach(async message => {
+      await Message.findByIdAndDelete(message.id);
+    })
+
+    
+    receivedMessages.forEach(async message => {
+      await Message.findByIdAndDelete(message.id);
+    })
+    
+
+    res.status(200).json({ message: "Deleted", sent: sentMessages, received: receivedMessages, me: {id: req.user.userId} , otherUser: req.params.otherUserId })
+
+  } catch (error) {
+    console.error("500 Error! Failed to complete request", error)
+    res.status(500).json({ message: `Error! Failed to complete request\n${error}` })
+  }
+})
+
+
 module.exports = router;
