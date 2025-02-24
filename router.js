@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const User = require("./schemas/User");
 const { Validate } = require("./controller");
 const authenticateUser = require("./middleware");
-const Message = require("./schemas/Message")
+const Message = require("./schemas/Message");
 
 // Function to create JWT token
 const createToken = (userId) => {
@@ -39,11 +39,13 @@ router.post("/login", async (req, res) => {
   const token = createToken(user._id);
 
   // Step 4: Set the token in cookies (secure and httpOnly flags)
+
   res.cookie("token", token, {
-    secure: false, // Use `true` only in production with HTTPS
-    httpOnly: true, // Prevent client-side access
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days (in milliseconds)
-    sameSite: "lax", // Prevent CSRF
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // Secure in production
+    sameSite: "none",
+    cookiesmaxAge: 24 * 60 * 60 * 1000 * 7,
+    path: "/",
   });
 
   // Step 5: Send the response with a message
@@ -94,7 +96,6 @@ router.get("/validate", authenticateUser, async (req, res) => {
   }
 });
 
-
 // Search users route (protected) - now searching by username
 // router.js
 // router.js
@@ -107,7 +108,7 @@ router.get("/users", authenticateUser, async (req, res) => {
 
     // Fetch messages where the user is either the sender or receiver
     const messages = await Message.find({
-      $or: [{ sender: userId }, { receiver: userId }]
+      $or: [{ sender: userId }, { receiver: userId }],
     })
       .populate("sender", "username email _id") // Populate sender details
       .populate("receiver", "username email _id") // Populate receiver details
@@ -118,7 +119,7 @@ router.get("/users", authenticateUser, async (req, res) => {
 
     // Collect unique user IDs from messages (excluding the authenticated user)
     const userIds = new Set();
-    messages.forEach(msg => {
+    messages.forEach((msg) => {
       if (msg.sender && msg.sender._id.toString() !== userId) {
         userIds.add(msg.sender._id.toString());
       }
@@ -128,24 +129,30 @@ router.get("/users", authenticateUser, async (req, res) => {
     });
 
     // Fetch user details of people the authenticated user has exchanged messages with
-    const users = await User.find({ _id: { $in: Array.from(userIds) } }, "username email _id");
+    const users = await User.find(
+      { _id: { $in: Array.from(userIds) } },
+      "username email _id"
+    );
 
     res.status(200).json({ users, messages });
-
   } catch (error) {
     console.error("Error fetching users and conversation history:", error);
-    res.status(500).json({ message: "Error fetching users and conversation history" });
+    res
+      .status(500)
+      .json({ message: "Error fetching users and conversation history" });
   }
 });
 
-
-
-router.get("/messages/unread/:userId", authenticateUser, async (req, res, next) => {
-  try {
-    console.log("hello world")
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    res.status(500).json({ message: "Error fetching users" });
+router.get(
+  "/messages/unread/:userId",
+  authenticateUser,
+  async (req, res, next) => {
+    try {
+      console.log("hello world");
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Error fetching users" });
+    }
   }
-})
+);
 module.exports = router;
