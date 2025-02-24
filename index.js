@@ -19,7 +19,11 @@ const Message = require("./schemas/Message");
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:3000", // Adjust this in production
+    origin: [
+      "http://localhost:3000",
+      "https://capable-swan-50b68e.netlify.app",
+    ], // Adjust this in production
+
     credentials: true,
   })
 );
@@ -101,15 +105,23 @@ io.on("connection", (socket) => {
 
     try {
       // Fetch any unread messages from the database for this user
-      const unreadMessages = await Message.find({ receiver: userId, read: false });
+      const unreadMessages = await Message.find({
+        receiver: userId,
+        read: false,
+      });
       if (unreadMessages.length > 0) {
         // Emit the unread messages to the user
         socket.emit("unreadMessages", unreadMessages);
-        console.log(`Emitted ${unreadMessages.length} unread messages to user ${userId}`);
+        console.log(
+          `Emitted ${unreadMessages.length} unread messages to user ${userId}`
+        );
       }
 
       // Optionally, mark those messages as read after emitting
-      await Message.updateMany({ receiver: userId, read: false }, { $set: { read: true } });
+      await Message.updateMany(
+        { receiver: userId, read: false },
+        { $set: { read: true } }
+      );
     } catch (error) {
       console.error("Error fetching unread messages:", error);
     }
@@ -135,9 +147,9 @@ io.on("connection", (socket) => {
         receiver: receiverId,
         text,
       }).save();
-      
+
       console.log("Message saved successfully:", message);
-      
+
       const activeUser = await User.findById(senderId);
       if (activeUser) {
         activeUser.messages.push(message._id);
@@ -163,8 +175,8 @@ io.on("connection", (socket) => {
         console.log(
           `Receiver ${receiverId} is offline, message saved to database.`
         );
-        // Optionally, you could store this message in an "offline message queue" 
-        // for later delivery if needed. This part is not necessary if you already 
+        // Optionally, you could store this message in an "offline message queue"
+        // for later delivery if needed. This part is not necessary if you already
         // save to the database.
       }
     } catch (error) {
