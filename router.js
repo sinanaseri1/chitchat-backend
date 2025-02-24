@@ -142,20 +142,6 @@ router.get("/users", authenticateUser, async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-router.get(
-  "/messages/unread/:userId",
-  authenticateUser,
-  async (req, res, next) => {
-    try {
-      console.log("hello world");
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      res.status(500).json({ message: "Error fetching users" });
-    }
-  }
-);
-=======
 router.get("/messages/unread/:userId", authenticateUser, async (req, res, next) => {
   try {
     console.log("hello world")
@@ -190,5 +176,4 @@ router.delete("/messages/delete/:otherUserId", authenticateUser, async (req, res
 })
 
 
->>>>>>> a8a23d274b6d13fe062fcc77d8e09621a3de5feb
 module.exports = router;
