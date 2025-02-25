@@ -22,7 +22,7 @@ app.use(
     origin: [
       "http://localhost:3000",
       "https://capable-swan-50b68e.netlify.app",
-    ], // Adjust this in production
+    ],
 
     credentials: true,
   })
@@ -85,7 +85,10 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000", // Adjust this to your frontend URL in production
+    origin: [
+      "http://localhost:3000",
+      "https://capable-swan-50b68e.netlify.app",
+    ],
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -175,9 +178,6 @@ io.on("connection", (socket) => {
         console.log(
           `Receiver ${receiverId} is offline, message saved to database.`
         );
-        // Optionally, you could store this message in an "offline message queue"
-        // for later delivery if needed. This part is not necessary if you already
-        // save to the database.
       }
     } catch (error) {
       console.error("Error sending private message:", error);
