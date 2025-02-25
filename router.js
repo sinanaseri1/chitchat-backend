@@ -41,9 +41,9 @@ router.post("/login", async (req, res) => {
   // Step 4: Set the token in cookies (secure and httpOnly flags)
 
   res.cookie("token", token, {
-    httpOnly: true,
+    httpOnly: process.env.NODE_ENV === "production" ? true : false,
     secure: process.env.NODE_ENV === "production", // Secure in production
-    sameSite: "none",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     cookiesmaxAge: 24 * 60 * 60 * 1000 * 7,
     path: "/",
   });
