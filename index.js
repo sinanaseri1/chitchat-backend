@@ -22,8 +22,7 @@ app.use(
     origin: [
       "http://localhost:3000",
       "https://capable-swan-50b68e.netlify.app",
-    ],
-
+    ], // Adjust this in production
     credentials: true,
   })
 );
