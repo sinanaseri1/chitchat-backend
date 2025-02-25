@@ -305,10 +305,12 @@ app.post("/login", async (req, res) => {
     if (isMobile) {
       return res.json({ token });
     } else {
-      res.cookie("authToken", token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
+      res.cookie("token", token, {
+        httpOnly: process.env.NODE_ENV === "production" ? true : false,
+        secure: process.env.NODE_ENV === "production", // Secure in production
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        cookiesmaxAge: 24 * 60 * 60 * 1000 * 7,
+        path: "/",
       });
       return res.json({ message: "Login successful" });
     }
