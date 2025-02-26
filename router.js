@@ -175,5 +175,30 @@ router.delete("/messages/delete/:otherUserId", authenticateUser, async (req, res
   }
 })
 
+router.get("/users/search", authenticateUser, async (req, res) => {
+  try {
+    const { username, email } = req.query;
+
+    if (username) {
+      const users = await User.find({
+        username: { $regex: new RegExp(username, "i") }
+      }).select("username email _id");
+      return res.status(200).json({ users });
+    }
+
+    if (email) {
+      const users = await User.find({
+        email: { $regex: new RegExp(email, "i") }
+      }).select("username email _id");
+      return res.status(200).json({ users });
+    }
+
+    // If no query is provided, return an empty array
+    return res.status(200).json({ users: [] });
+  } catch (error) {
+    console.error("Error searching users:", error);
+    return res.status(500).json({ message: "Error searching users" });
+  }
+});
 
 module.exports = router;
