@@ -309,7 +309,7 @@ app.post("/login", async (req, res) => {
         httpOnly: process.env.NODE_ENV === "production" ? true : false,
         secure: process.env.NODE_ENV === "production", // Secure in production
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        cookiesmaxAge: 24 * 60 * 60 * 1000 * 7,
+        maxAge: 24 * 60 * 60 * 1000 * 7,
         path: "/",
       });
       return res.json({ message: "Login successful" });

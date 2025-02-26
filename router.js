@@ -16,42 +16,42 @@ const createToken = (userId) => {
 };
 
 // Login route (can use either username or email)
-router.post("/login", async (req, res) => {
-  console.log("the right function");
-  const { usernameOrEmail, password } = req.body; // Accept either username or email
+// router.post("/login", async (req, res) => {
+//   console.log("the right function");
+//   const { usernameOrEmail, password } = req.body; // Accept either username or email
 
-  // Step 1: Find user by username or email
-  const user = await User.findOne({
-    $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
-  });
+//   // Step 1: Find user by username or email
+//   const user = await User.findOne({
+//     $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
+//   });
 
-  if (!user) {
-    return res.status(404).send({ message: "User not found" });
-  }
+//   if (!user) {
+//     return res.status(404).send({ message: "User not found" });
+//   }
 
-  // Step 2: Compare password with stored hash
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    return res.status(401).send({ message: "Invalid password" });
-  }
+//   // Step 2: Compare password with stored hash
+//   const isPasswordValid = await bcrypt.compare(password, user.password);
+//   if (!isPasswordValid) {
+//     return res.status(401).send({ message: "Invalid password" });
+//   }
 
-  // Step 3: Create a JWT token
-  const token = createToken(user._id);
+//   // Step 3: Create a JWT token
+//   const token = createToken(user._id);
 
-  // Step 4: Set the token in cookies (secure and httpOnly flags)
+//   // Step 4: Set the token in cookies (secure and httpOnly flags)
 
-  res.cookie("token", token, {
-    httpOnly: process.env.NODE_ENV === "production" ? true : false,
-    secure: process.env.NODE_ENV === "production", // Secure in production
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    cookiesmaxAge: 24 * 60 * 60 * 1000 * 7,
-    path: "/",
-  });
+//   res.cookie("token", token, {
+//     httpOnly: process.env.NODE_ENV === "production" ? true : false,
+//     secure: process.env.NODE_ENV === "production", // Secure in production
+//     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+//     cookiesmaxAge: 24 * 60 * 60 * 1000 * 7,
+//     path: "/",
+//   });
 
 
-  // Step 5: Send the response with a message
-  res.status(200).send({ message: "Login successful", token });
-});
+//   // Step 5: Send the response with a message
+//   res.status(200).send({ message: "Login successful", token });
+// });
 
 // Signup route
 router.post("/signup", async (req, res) => {
@@ -82,8 +82,12 @@ router.post("/signup", async (req, res) => {
 
 // Validate route (protected)
 router.get("/validate", authenticateUser, async (req, res) => {
+
+
+  console.log(`req.user is ${req.user.id}`)
+
   try {
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.user.id);
 
     if (!user) {
       return res.status(404).send({ message: "User not found" });
